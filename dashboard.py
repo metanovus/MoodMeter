@@ -9,7 +9,6 @@ mood_map = {
 }
 
 df = pd.read_json('generated_records.json')
-
 df['date'] = pd.to_datetime(df['date'])
 df.set_index('date', inplace=True)
 

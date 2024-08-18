@@ -12,6 +12,17 @@ TOKEN = os.environ.get('TELEGRAM_TOKEN')
 ADMIN_CHAT_ID = os.environ.get('ADMIN_CHAT_ID')
 
 def handle_message(update: Update, context: CallbackContext):
+    """
+    Processes incoming messages, analyzes sentiment, and handles negative sentiment alerts.
+
+    Args:
+        update (Update): The incoming update from the Telegram chat.
+        context (CallbackContext): The context passed by the Telegram bot, used to manage bot interaction and state.
+
+    Returns:
+        None
+    """
+
     message_date = update.message.date
     chat_id = update.message.chat_id
     user = update.message.from_user
@@ -39,6 +50,17 @@ def handle_message(update: Update, context: CallbackContext):
 
 
 def main():
+    """
+    Initializes the Telegram bot, sets up message handling, and starts polling for updates.
+
+    Args:
+        None
+
+    Returns:
+        None
+    """
+
+
     updater = Updater(token=TOKEN, use_context=True)
     bot = updater.bot
     dispatcher = updater.dispatcher
