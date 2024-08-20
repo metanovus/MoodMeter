@@ -8,3 +8,4 @@ telegram==0.0.1
 torch==2.4.0
 transformers==4.44.0
 python-dotenv==1.0.1
+streamlit-authenticator==0.3.3

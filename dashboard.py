@@ -1,61 +1,90 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objs as go
+import streamlit_authenticator as stauth
 
-mood_map = {
-    'POSITIVE': 1,
-    'NEGATIVE': -1,
-    'NEUTRAL': 0
+###Authenticator###
+usernames = ['admin1', 'admin2']
+names = ['Admin One', 'Admin Two']
+passwords = ['admin', 'admin']
+
+hashed_passwords = stauth.Hasher(passwords).generate()
+
+credentials = {
+    "usernames": {
+        usernames[0]: {"name": names[0], "password": hashed_passwords[0]},
+        usernames[1]: {"name": names[1], "password": hashed_passwords[1]},
+    }
 }
 
-df = pd.read_json('generated_records.json')
-df['date'] = pd.to_datetime(df['date'])
-df.set_index('date', inplace=True)
+authenticator = stauth.Authenticate(credentials, "app_home", "auth", cookie_expiry_days=30)
 
-df['label_value'] = df['label'].map(mood_map)
+name, authentication_status, username = authenticator.login('main')
 
-st.sidebar.header("Filter by Date")
-start_date = st.sidebar.date_input("Start date", df.index.min().date())
-end_date = st.sidebar.date_input("End date", df.index.max().date())
+if authentication_status == False:
+    st.error("Username/password is incorrect")
+elif authentication_status == None:
+    st.warning("Please enter your username and password")
+elif authentication_status:
+    ######################
+    print(f'username: {username}, name: {name}')
 
-filtered_df = df[(df.index.date >= start_date) & (df.index.date <= end_date)]
+    mood_map = {
+        'POSITIVE': 1,
+        'NEGATIVE': -1,
+        'NEUTRAL': 0
+    }
 
-grouping = st.sidebar.selectbox(
-    'Choose interval for grouping:',
-    ['Hours', 'Days', 'Weeks']
-)
+    df = pd.read_json('generated_records.json')
+    df['date'] = pd.to_datetime(df['date'])
+    df.set_index('date', inplace=True)
 
-if grouping == 'Hours':
-    resampled_df = filtered_df.resample('H')['label_value'].mean()
-elif grouping == 'Days':
-    resampled_df = filtered_df.resample('D')['label_value'].mean()
-elif grouping == 'Weeks':
-    resampled_df = filtered_df.resample('W')['label_value'].mean()
+    df['label_value'] = df['label'].map(mood_map)
 
-fig = go.Figure()
+    st.sidebar.header("Filter by Date")
+    start_date = st.sidebar.date_input("Start date", df.index.min().date())
+    end_date = st.sidebar.date_input("End date", df.index.max().date())
 
-fig.add_trace(go.Bar(
-    x=resampled_df.index,
-    y=resampled_df.clip(lower=0),
-    name='Positive Mood',
-    marker_color='green'
-))
+    filtered_df = df[(df.index.date >= start_date) & (df.index.date <= end_date)]
 
-fig.add_trace(go.Bar(
-    x=resampled_df.index,
-    y=resampled_df.clip(upper=0),
-    name='Negative Mood',
-    marker_color='red'
-))
+    grouping = st.sidebar.selectbox(
+        'Choose interval for grouping:',
+        ['Hours', 'Days', 'Weeks']
+    )
 
-fig.update_layout(
-    title=f'Mood over Time ({grouping})',
-    xaxis_title='Time',
-    yaxis_title='Mood Score',
-    showlegend=False,
-    plot_bgcolor='white',
-    barmode='relative'
-)
+    if grouping == 'Hours':
+        resampled_df = filtered_df.resample('H')['label_value'].mean()
+    elif grouping == 'Days':
+        resampled_df = filtered_df.resample('D')['label_value'].mean()
+    elif grouping == 'Weeks':
+        resampled_df = filtered_df.resample('W')['label_value'].mean()
 
-st.title(f'Mood grouping by {grouping.lower()}')
-st.plotly_chart(fig)
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(
+        x=resampled_df.index,
+        y=resampled_df.clip(lower=0),
+        name='Positive Mood',
+        marker_color='green'
+    ))
+
+    fig.add_trace(go.Bar(
+        x=resampled_df.index,
+        y=resampled_df.clip(upper=0),
+        name='Negative Mood',
+        marker_color='red'
+    ))
+
+    fig.update_layout(
+        title=f'Mood over Time ({grouping})',
+        xaxis_title='Time',
+        yaxis_title='Mood Score',
+        showlegend=False,
+        plot_bgcolor='white',
+        barmode='relative'
+    )
+
+    st.title(f'Mood grouping by {grouping.lower()}')
+    st.plotly_chart(fig)
+
+    authenticator.logout("Logout")
