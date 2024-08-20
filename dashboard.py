@@ -19,72 +19,97 @@ credentials = {
 
 authenticator = stauth.Authenticate(credentials, "app_home", "auth", cookie_expiry_days=30)
 
-name, authentication_status, username = authenticator.login('main')
 
-if authentication_status == False:
-    st.error("Username/password is incorrect")
-elif authentication_status == None:
-    st.warning("Please enter your username and password")
-elif authentication_status:
-    ######################
-    print(f'username: {username}, name: {name}')
+st.sidebar.title("User Management")
+auth_option = st.sidebar.radio("Choose an option", options=["Login", "Register"])
 
-    mood_map = {
-        'POSITIVE': 1,
-        'NEGATIVE': -1,
-        'NEUTRAL': 0
-    }
+if auth_option == "Login":
+    print(credentials['usernames'].keys())
+    name, authentication_status, username = authenticator.login('main')
 
-    df = pd.read_json('generated_records.json')
-    df['date'] = pd.to_datetime(df['date'])
-    df.set_index('date', inplace=True)
+    if authentication_status == False:
+        st.error("Username/password is incorrect")
+    elif authentication_status == None:
+        st.warning("Please enter your username and password")
+    elif authentication_status:
+        ######################
+        print(f'username: {username}, name: {name}')
 
-    df['label_value'] = df['label'].map(mood_map)
+        mood_map = {
+            'POSITIVE': 1,
+            'NEGATIVE': -1,
+            'NEUTRAL': 0
+        }
 
-    st.sidebar.header("Filter by Date")
-    start_date = st.sidebar.date_input("Start date", df.index.min().date())
-    end_date = st.sidebar.date_input("End date", df.index.max().date())
+        df = pd.read_json('generated_records.json')
+        df['date'] = pd.to_datetime(df['date'])
+        df.set_index('date', inplace=True)
 
-    filtered_df = df[(df.index.date >= start_date) & (df.index.date <= end_date)]
+        df['label_value'] = df['label'].map(mood_map)
 
-    grouping = st.sidebar.selectbox(
-        'Choose interval for grouping:',
-        ['Hours', 'Days', 'Weeks']
-    )
+        st.sidebar.header("Filter by Date")
+        start_date = st.sidebar.date_input("Start date", df.index.min().date())
+        end_date = st.sidebar.date_input("End date", df.index.max().date())
 
-    if grouping == 'Hours':
-        resampled_df = filtered_df.resample('H')['label_value'].mean()
-    elif grouping == 'Days':
-        resampled_df = filtered_df.resample('D')['label_value'].mean()
-    elif grouping == 'Weeks':
-        resampled_df = filtered_df.resample('W')['label_value'].mean()
+        filtered_df = df[(df.index.date >= start_date) & (df.index.date <= end_date)]
 
-    fig = go.Figure()
+        grouping = st.sidebar.selectbox(
+            'Choose interval for grouping:',
+            ['Hours', 'Days', 'Weeks']
+        )
 
-    fig.add_trace(go.Bar(
-        x=resampled_df.index,
-        y=resampled_df.clip(lower=0),
-        name='Positive Mood',
-        marker_color='green'
-    ))
+        if grouping == 'Hours':
+            resampled_df = filtered_df.resample('h')['label_value'].mean()
+        elif grouping == 'Days':
+            resampled_df = filtered_df.resample('D')['label_value'].mean()
+        elif grouping == 'Weeks':
+            resampled_df = filtered_df.resample('W')['label_value'].mean()
 
-    fig.add_trace(go.Bar(
-        x=resampled_df.index,
-        y=resampled_df.clip(upper=0),
-        name='Negative Mood',
-        marker_color='red'
-    ))
+        fig = go.Figure()
 
-    fig.update_layout(
-        title=f'Mood over Time ({grouping})',
-        xaxis_title='Time',
-        yaxis_title='Mood Score',
-        showlegend=False,
-        plot_bgcolor='white',
-        barmode='relative'
-    )
+        fig.add_trace(go.Bar(
+            x=resampled_df.index,
+            y=resampled_df.clip(lower=0),
+            name='Positive Mood',
+            marker_color='green'
+        ))
 
-    st.title(f'Mood grouping by {grouping.lower()}')
-    st.plotly_chart(fig)
+        fig.add_trace(go.Bar(
+            x=resampled_df.index,
+            y=resampled_df.clip(upper=0),
+            name='Negative Mood',
+            marker_color='red'
+        ))
 
-    authenticator.logout("Logout")
+        fig.update_layout(
+            title=f'Mood over Time ({grouping})',
+            xaxis_title='Time',
+            yaxis_title='Mood Score',
+            showlegend=False,
+            plot_bgcolor='white',
+            barmode='relative'
+        )
+
+        st.title(f'Mood grouping by {grouping.lower()}')
+        st.plotly_chart(fig)
+
+        authenticator.logout("Logout")
+
+elif auth_option == "Register":
+    # Регистрация новых пользователей
+    st.header("Register a New User")
+
+    new_username = st.text_input("Enter a username")
+    new_name = st.text_input("Enter your full name")
+    new_password = st.text_input("Enter a password", type="password")
+    confirm_password = st.text_input("Confirm password", type="password")
+
+    if st.button("Register"):
+        if new_password == confirm_password:
+            hashed_new_password = stauth.Hasher([new_password]).generate()[0]
+            credentials["usernames"].update({
+                new_username: {"name": new_name, "password": hashed_new_password}
+            })
+            st.success("Registration successful! You can now log in.")
+        else:
+            st.error("Passwords do not match. Please try again.")
