@@ -1,33 +1,47 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objs as go
-import streamlit_authenticator as stauth
+from lib.postgresql_manager import PostgreSQLConnector
+import hashlib
 
-###Authenticator###
-usernames = ['admin1', 'admin2']
-names = ['Admin One', 'Admin Two']
-passwords = ['admin', 'admin']
+conn = PostgreSQLConnector()
 
-hashed_passwords = stauth.Hasher(passwords).generate()
 
-credentials = {
-    "usernames": {
-        usernames[0]: {"name": names[0], "password": hashed_passwords[0]},
-        usernames[1]: {"name": names[1], "password": hashed_passwords[1]},
-    }
-}
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
 
-authenticator = stauth.Authenticate(credentials, "app_home", "auth", cookie_expiry_days=30)
 
-name, authentication_status, username = authenticator.login('main')
+def authenticate_user(username, password):
+    query = "SELECT password FROM user_credentials WHERE user_id = %s"
+    try:
+        result = conn.read_data(query, (username,))
+        if result:
+            stored_hashed_password = result[0][0]
+            return hash_password(password) == stored_hashed_password
+        else:
+            return False
+    except Exception as e:
+        # st.error(f"An error occurred: {e}")
+        return False
 
-if authentication_status == False:
-    st.error("Username/password is incorrect")
-elif authentication_status == None:
-    st.warning("Please enter your username and password")
-elif authentication_status:
-    ######################
-    print(f'username: {username}, name: {name}')
+
+if "authenticated" not in st.session_state:
+    st.session_state["authenticated"] = False
+
+if not st.session_state["authenticated"]:
+    st.title("Login")
+
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+
+    if st.button("Login"):
+        if authenticate_user(username, password):
+            st.success(f"Welcome")
+            st.session_state["authenticated"] = True
+            st.session_state["username"] = username
+        else:
+            st.error("Username/password is incorrect")
+else:
 
     mood_map = {
         'POSITIVE': 1,
@@ -53,7 +67,7 @@ elif authentication_status:
     )
 
     if grouping == 'Hours':
-        resampled_df = filtered_df.resample('H')['label_value'].mean()
+        resampled_df = filtered_df.resample('h')['label_value'].mean()
     elif grouping == 'Days':
         resampled_df = filtered_df.resample('D')['label_value'].mean()
     elif grouping == 'Weeks':
@@ -86,5 +100,3 @@ elif authentication_status:
 
     st.title(f'Mood grouping by {grouping.lower()}')
     st.plotly_chart(fig)
-
-    authenticator.logout("Logout")
