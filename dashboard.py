@@ -3,6 +3,8 @@ import pandas as pd
 import plotly.graph_objs as go
 from lib.postgresql_manager import PostgreSQLConnector
 import hashlib
+import subprocess
+import time
 
 conn = PostgreSQLConnector()
 
@@ -27,6 +29,8 @@ def authenticate_user(username, password):
 
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
+if "token_entered" not in st.session_state:
+    st.session_state["token_entered"] = False
 
 if not st.session_state["authenticated"]:
     st.title("Login")
@@ -39,10 +43,28 @@ if not st.session_state["authenticated"]:
             st.success(f"Welcome")
             st.session_state["authenticated"] = True
             st.session_state["username"] = username
+            time.sleep(2)
+            st.rerun()
         else:
             st.error("Username/password is incorrect")
-else:
 
+elif not st.session_state["token_entered"]:
+    st.title("Telegram Bot Configuration")
+
+    token = st.text_input("Enter your Telegram Bot TOKEN", type="password")
+
+    if st.button("Submit TOKEN"):
+        if token:
+            st.session_state["telegram_token"] = token
+            st.session_state["token_entered"] = True
+            subprocess.Popen(["python", "telegram_bot.py", token])
+            st.success("Bot started successfully!")
+            time.sleep(2)
+            st.rerun()
+        else:
+            st.error("Please enter a valid Telegram Bot TOKEN.")
+
+else:
     mood_map = {
         'POSITIVE': 1,
         'NEGATIVE': -1,
