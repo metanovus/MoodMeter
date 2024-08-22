@@ -3,8 +3,9 @@ import pandas as pd
 import plotly.graph_objs as go
 from lib.postgresql_manager import PostgreSQLConnector
 import hashlib
-import subprocess
 import time
+import os
+import subprocess
 
 conn = PostgreSQLConnector()
 
@@ -57,7 +58,11 @@ elif not st.session_state["token_entered"]:
         if token:
             st.session_state["telegram_token"] = token
             st.session_state["token_entered"] = True
-            subprocess.Popen(["python", "telegram_bot.py", token])
+
+            env = os.environ.copy()
+            env['TELEGRAM_TOKEN'] = token
+            st.session_state['bot_process'] = subprocess.Popen(['python', 'telegram_bot.py'], env=env)
+
             st.success("Bot started successfully!")
             time.sleep(2)
             st.rerun()
