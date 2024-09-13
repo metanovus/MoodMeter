@@ -1,5 +1,5 @@
 matplotlib-inline==0.1.7
-numpy==2.0.1
+numpy==1.26.4
 pandas==2.2.2
 plotly==5.23.0
 python-telegram-bot==13.15
