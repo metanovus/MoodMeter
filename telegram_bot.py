@@ -17,6 +17,7 @@ ADMIN_CHAT_ID = os.environ.get('ADMIN_CHAT_ID')
 
 conn = PostgreSQLConnector()
 
+
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
@@ -92,10 +93,22 @@ def add_user(update: Update, context: CallbackContext) -> None:
     if update.effective_chat.type != 'private':
         context.bot.send_message(chat_id=update.effective_chat.id, text='Эта команда доступна только в личных сообщениях.')
         return
+    
+    query_max_id = "select max(id) from public.user_credentials"
+    max_id = conn.read_data_to_dataframe(query_max_id).iloc[0]
+    id = max_id + 1
+
     user_id = update.message.from_user.id
     password = hash_password(str(user_id))
-    save_user_to_sql(2, user_id, password)
-    update.message.reply_text(f"Ваш user_id: {user_id} был записан")
+    query_user = f"""select user_id 
+                    from public.user_credentials 
+                    where user_id={user_id}"""
+    users = conn.read_data_to_dataframe(query_user)
+    if len(users) == 0:
+        save_user_to_sql(id, user_id, password)
+        update.message.reply_text(f"Ваш user_id: {user_id} был записан")
+        return
+    update.message.reply_text(f"Такой user_id: {user_id} уже есть в базе")
 
 def add_chat(user_id: int, chat_id: int):
     save_chat_to_sql(user_id, chat_id)

@@ -70,3 +70,4 @@ class PostgreSQLConnector:
 
         self.cur.executemany(insert_query, data)
         self.conn.commit()
+    
