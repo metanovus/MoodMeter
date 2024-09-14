@@ -112,10 +112,6 @@ def add_user(update: Update, context: CallbackContext) -> None:
         return
     update.message.reply_text(f"Такой user_id: {user_id} уже есть в базе")
 
-def add_chat(user_id: int, chat_id: int):
-    save_chat_to_sql(user_id, chat_id)
-    
-
 def add_chat_command(update: Update, context: CallbackContext) -> None:
     if update.effective_chat.type != 'private':
         context.bot.send_message(chat_id=update.effective_chat.id, text='Эта команда доступна только в личных сообщениях.')
@@ -124,16 +120,48 @@ def add_chat_command(update: Update, context: CallbackContext) -> None:
     if len(context.args) != 1:
         update.message.reply_text('Пожалуйста, укажите ID чата, который нужно добавить.')
         return
-
+    
     try:
         user_id = update.message.from_user.id
         chat_id = int(context.args[0])  
     except ValueError:
         update.message.reply_text('ID чата должен быть числом.')
         return
-    
-    add_chat(user_id, chat_id)
+
+    save_chat_to_sql(user_id, chat_id)
     update.message.reply_text(f'Чат с ID {chat_id} добавлен в базу данных.')
+
+def deactivate_chat(update: Update, context: CallbackContext) -> None:
+    if update.effective_chat.type != 'private':
+        context.bot.send_message(chat_id=update.effective_chat.id, text='Эта команда доступна только в личных сообщениях.')
+        return
+    
+    if len(context.args) != 1:
+        update.message.reply_text('Пожалуйста, укажите ID чата, который нужно убрать.')
+        return
+
+    try:
+        user_id = update.message.from_user.id
+        chat_id = int(context.args[0]) 
+    except ValueError:
+        update.message.reply_text('ID чата должен быть числом.')
+        return
+    
+    query_admin = f"""SELECT user_id 
+                      FROM public.user_chat
+                      WHERE chat_id = {chat_id}"""
+    
+    admin_data = conn.read_data_to_dataframe(query_admin)
+
+    if admin_data.empty or admin_data.iloc[0].user_id != user_id:
+        update.message.reply_text('Вы не админ этого чата')
+        return
+
+    # Удаляем чат из базы данных (функция, которую нужно реализовать)
+    # deactivate_chat_from_sql(user_id, chat_id)
+
+    update.message.reply_text(f'Чат с ID {chat_id} убран из активных.')
+
 
 # Стоит точно перепроверить эту функцию в будущем
 def welcome(update: Update, context: CallbackContext) -> None:
@@ -165,10 +193,14 @@ def main():
     bot = updater.bot
     dispatcher = updater.dispatcher
     dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+    dispatcher.add_handler(MessageHandler(Filters.status_update.new_chat_members, welcome)) 
+
     dispatcher.add_handler(CommandHandler('start', start))
     dispatcher.add_handler(CommandHandler('add_user', add_user))
     dispatcher.add_handler(CommandHandler('add_chat', add_chat_command))
-    dispatcher.add_handler(MessageHandler(Filters.status_update.new_chat_members, welcome)) 
+    dispatcher.add_handler(CommandHandler('deactivate_chat', deactivate_chat))
+    
+    
 
     updater.start_polling()
     updater.idle()
