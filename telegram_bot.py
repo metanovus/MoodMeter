@@ -28,9 +28,9 @@ def save_message_to_sql(chat_id, user_id, message_text, message_label, label_sco
     conn.insert_data(data, table_name, columns)
 
 
-def save_user_to_sql(id, user_id, password, table_name='user_credentials'):
-    data = [(id, user_id, password)]
-    columns = ['id', 'user_id', 'password']
+def save_user_to_sql(user_id, password, table_name='user_credentials'):
+    data = [(user_id, password)]
+    columns = ['user_id', 'password']
     conn.insert_data(data, table_name, columns)
 
 def save_chat_to_sql(user_id, chat_id, table_name='user_chat'):
@@ -94,11 +94,6 @@ def add_user(update: Update, context: CallbackContext) -> None:
         context.bot.send_message(chat_id=update.effective_chat.id, text='Эта команда доступна только в личных сообщениях.')
         return
     
-    query_max_id = "select max(id) from public.user_credentials"
-    max_id = conn.read_data_to_dataframe(query_max_id).iloc[0]
-    if max_id is None:
-        max_id = 0
-    id = max_id + 1
 
     user_id = update.message.from_user.id
     password = hash_password(str(user_id))
@@ -107,7 +102,7 @@ def add_user(update: Update, context: CallbackContext) -> None:
                     where user_id={user_id}"""
     users = conn.read_data_to_dataframe(query_user)
     if len(users) == 0:
-        save_user_to_sql(id, user_id, password)
+        save_user_to_sql(user_id, password)
         update.message.reply_text(f"Ваш user_id: {user_id} был записан")
         return
     update.message.reply_text(f"Такой user_id: {user_id} уже есть в базе")
