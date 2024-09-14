@@ -21,6 +21,7 @@ conn = PostgreSQLConnector()
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
+
 def save_message_to_sql(chat_id, user_id, message_text, message_label, label_score, chat_mood, message_datetime,
                         table_name='message_analysis'):
     data = [(chat_id, user_id, message_text, message_datetime, message_label, label_score, chat_mood)]
@@ -33,10 +34,12 @@ def save_user_to_sql(user_id, password, table_name='user_credentials'):
     columns = ['user_id', 'password']
     conn.insert_data(data, table_name, columns)
 
+
 def save_chat_to_sql(user_id, chat_id, table_name='user_chat'):
     data = [(user_id, chat_id)]
     columns = ['user_id', 'chat_id']
     conn.insert_data(data, table_name, columns)
+
 
 def handle_message(update: Update, context: CallbackContext):
     """
@@ -59,9 +62,7 @@ def handle_message(update: Update, context: CallbackContext):
     message_label, label_score = transformers_mood.predict_sentiment(message_text)
 
     chat_mood = mood_calculator.calculate_weighted_sentiment(message_label, label_score)
-
-    # deprecated. need to be removed
-    mood_calculator.save_message(chat_id, message_label, label_score, chat_mood, message_datetime)
+    print('Here', chat_mood)
 
     save_message_to_sql(chat_id=chat_id,
                         user_id=user.id,
@@ -85,15 +86,17 @@ def handle_message(update: Update, context: CallbackContext):
     print(f"Message: {message_text}")
     print(message_label, label_score, 'MOOD:', chat_mood)
 
+
 def start(update: Update, context: CallbackContext) -> None:
     update.message.reply_text('Привет! Используйте команду /add_user, чтобы добавить свой user_id.')
     update.message.reply_text('Или команду /add_chat chat_id, чтобы добавить chat_id в базу данных')
 
+
 def add_user(update: Update, context: CallbackContext) -> None:
     if update.effective_chat.type != 'private':
-        context.bot.send_message(chat_id=update.effective_chat.id, text='Эта команда доступна только в личных сообщениях.')
+        context.bot.send_message(chat_id=update.effective_chat.id,
+                                 text='Эта команда доступна только в личных сообщениях.')
         return
-    
 
     user_id = update.message.from_user.id
     password = hash_password(str(user_id))
@@ -107,18 +110,20 @@ def add_user(update: Update, context: CallbackContext) -> None:
         return
     update.message.reply_text(f"Такой user_id: {user_id} уже есть в базе")
 
+
 def add_chat_command(update: Update, context: CallbackContext) -> None:
     if update.effective_chat.type != 'private':
-        context.bot.send_message(chat_id=update.effective_chat.id, text='Эта команда доступна только в личных сообщениях.')
+        context.bot.send_message(chat_id=update.effective_chat.id,
+                                 text='Эта команда доступна только в личных сообщениях.')
         return
-    
+
     if len(context.args) != 1:
         update.message.reply_text('Пожалуйста, укажите ID чата, который нужно добавить.')
         return
-    
+
     try:
         user_id = update.message.from_user.id
-        chat_id = int(context.args[0])  
+        chat_id = int(context.args[0])
     except ValueError:
         update.message.reply_text('ID чата должен быть числом.')
         return
@@ -126,26 +131,28 @@ def add_chat_command(update: Update, context: CallbackContext) -> None:
     save_chat_to_sql(user_id, chat_id)
     update.message.reply_text(f'Чат с ID {chat_id} добавлен в базу данных.')
 
+
 def deactivate_chat(update: Update, context: CallbackContext) -> None:
     if update.effective_chat.type != 'private':
-        context.bot.send_message(chat_id=update.effective_chat.id, text='Эта команда доступна только в личных сообщениях.')
+        context.bot.send_message(chat_id=update.effective_chat.id,
+                                 text='Эта команда доступна только в личных сообщениях.')
         return
-    
+
     if len(context.args) != 1:
         update.message.reply_text('Пожалуйста, укажите ID чата, который нужно убрать.')
         return
 
     try:
         user_id = update.message.from_user.id
-        chat_id = int(context.args[0]) 
+        chat_id = int(context.args[0])
     except ValueError:
         update.message.reply_text('ID чата должен быть числом.')
         return
-    
+
     query_admin = f"""SELECT user_id 
                       FROM public.user_chat
                       WHERE chat_id = {chat_id}"""
-    
+
     admin_data = conn.read_data_to_dataframe(query_admin)
 
     if admin_data.empty or admin_data.iloc[0].user_id != user_id:
@@ -161,17 +168,19 @@ def deactivate_chat(update: Update, context: CallbackContext) -> None:
 # Стоит точно перепроверить эту функцию в будущем
 def welcome(update: Update, context: CallbackContext) -> None:
     for member in update.message.new_chat_members:
-        if member.id == context.bot.id:  
+        if member.id == context.bot.id:
             chat_id = update.effective_chat.id
-            read_chat_history(context.bot, chat_id, 50)  
+            read_chat_history(context.bot, chat_id, 50)
             break
 
+
 def read_chat_history(bot, chat_id, count):
-    messages = bot.get_chat_history(chat_id, limit=count) 
-    
+    messages = bot.get_chat_history(chat_id, limit=count)
+
     for message in messages:
-        if message.text:  
-            handle_message(message, bot)  
+        if message.text:
+            handle_message(message, bot)
+
 
 def main():
     """
@@ -188,14 +197,12 @@ def main():
     bot = updater.bot
     dispatcher = updater.dispatcher
     dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
-    dispatcher.add_handler(MessageHandler(Filters.status_update.new_chat_members, welcome)) 
+    dispatcher.add_handler(MessageHandler(Filters.status_update.new_chat_members, welcome))
 
     dispatcher.add_handler(CommandHandler('start', start))
     dispatcher.add_handler(CommandHandler('add_user', add_user))
     dispatcher.add_handler(CommandHandler('add_chat', add_chat_command))
     dispatcher.add_handler(CommandHandler('deactivate_chat', deactivate_chat))
-    
-    
 
     updater.start_polling()
     updater.idle()
