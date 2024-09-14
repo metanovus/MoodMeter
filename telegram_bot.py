@@ -87,7 +87,7 @@ def handle_message(update: Update, context: CallbackContext):
 
 def start(update: Update, context: CallbackContext) -> None:
     update.message.reply_text('Привет! Используйте команду /add_user, чтобы добавить свой user_id.')
-    update.message.reply_text('Или команду /add_chat, чтобы добавить чат в базу данных')
+    update.message.reply_text('Или команду /add_chat chat_id, чтобы добавить chat_id в базу данных')
 
 def add_user(update: Update, context: CallbackContext) -> None:
     if update.effective_chat.type != 'private':
@@ -96,6 +96,8 @@ def add_user(update: Update, context: CallbackContext) -> None:
     
     query_max_id = "select max(id) from public.user_credentials"
     max_id = conn.read_data_to_dataframe(query_max_id).iloc[0]
+    if max_id is None:
+        max_id = 0
     id = max_id + 1
 
     user_id = update.message.from_user.id
@@ -133,6 +135,21 @@ def add_chat_command(update: Update, context: CallbackContext) -> None:
     add_chat(user_id, chat_id)
     update.message.reply_text(f'Чат с ID {chat_id} добавлен в базу данных.')
 
+# Стоит точно перепроверить эту функцию в будущем
+def welcome(update: Update, context: CallbackContext) -> None:
+    for member in update.message.new_chat_members:
+        if member.id == context.bot.id:  
+            chat_id = update.effective_chat.id
+            read_chat_history(context.bot, chat_id, 50)  
+            break
+
+def read_chat_history(bot, chat_id, count):
+    messages = bot.get_chat_history(chat_id, limit=count) 
+    
+    for message in messages:
+        if message.text:  
+            handle_message(message, bot)  
+
 def main():
     """
     Initializes the Telegram bot, sets up message handling, and starts polling for updates.
@@ -151,6 +168,7 @@ def main():
     dispatcher.add_handler(CommandHandler('start', start))
     dispatcher.add_handler(CommandHandler('add_user', add_user))
     dispatcher.add_handler(CommandHandler('add_chat', add_chat_command))
+    dispatcher.add_handler(MessageHandler(Filters.status_update.new_chat_members, welcome)) 
 
     updater.start_polling()
     updater.idle()
