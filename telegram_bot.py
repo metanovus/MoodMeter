@@ -62,7 +62,6 @@ def handle_message(update: Update, context: CallbackContext):
     message_label, label_score = transformers_mood.predict_sentiment(message_text)
 
     chat_mood = mood_calculator.calculate_weighted_sentiment(message_label, label_score)
-    print('Here', chat_mood)
 
     save_message_to_sql(chat_id=chat_id,
                         user_id=user.id,
