@@ -70,4 +70,14 @@ class PostgreSQLConnector:
 
         self.cur.executemany(insert_query, data)
         self.conn.commit()
-    
+
+    @with_connection
+    def update_data(self, table_name, condition_column, condition_value, update_column, new_value):
+        update_query = f"""
+        UPDATE {table_name}
+        SET {update_column} = %s
+        WHERE {condition_column} = %s
+        """
+
+        self.cur.execute(update_query, (new_value, condition_value))
+        self.conn.commit()
