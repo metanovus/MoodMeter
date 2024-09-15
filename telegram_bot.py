@@ -149,33 +149,40 @@ def handle_message(update: Update, context: CallbackContext) -> None:
     chat_id = message.chat_id
     user = message.from_user
     message_text = message.text
-
-    # Анализ настроения сообщения
-    message_label, label_score = transformers_mood.predict_sentiment(message_text)
-
-    # Вычисление общего настроения чата
-    chat_mood = mood_calculator.calculate_weighted_sentiment(message_label, label_score)
-
-    # Сохранение данных в базу
-    save_message_to_sql(
-        chat_id=chat_id,
-        user_id=user.id,
-        message_text=message_text,
-        message_datetime=message_datetime,
-        message_label=message_label,
-        label_score=label_score,
-        chat_mood=chat_mood
+    # Проверка, активен ли чат в БД
+    query_status_chat = (
+        f"select status from public.chat"
+        f"WHERE chat_id = {chat_id}"
     )
+    status_chat_data = conn.read_data_to_dataframe(query_status_chat).iloc[0]
 
-    # Проверка на негативные сообщения с высокой уверенностью
-    if message_label == "NEGATIVE" and label_score > 0.65:
-        alert_message = (
-            f"Внимание! В чате обнаружено негативное сообщение:\n\n"
-            f"Пользователь: {user.full_name} (@{user.username})\n"
-            f"Сообщение: {message_text}\n"
-            f"Оценка негативности: {label_score:.2f}"
+    if status_chat_data == 'active':
+        # Анализ настроения сообщения
+        message_label, label_score = transformers_mood.predict_sentiment(message_text)
+
+        # Вычисление общего настроения чата
+        chat_mood = mood_calculator.calculate_weighted_sentiment(message_label, label_score)
+
+        # Сохранение данных в базу
+        save_message_to_sql(
+            chat_id=chat_id,
+            user_id=user.id,
+            message_text=message_text,
+            message_datetime=message_datetime,
+            message_label=message_label,
+            label_score=label_score,
+            chat_mood=chat_mood
         )
-        context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=alert_message)
+
+        # Проверка на негативные сообщения с высокой уверенностью
+        if message_label == "NEGATIVE" and label_score > 0.65:
+            alert_message = (
+                f"Внимание! В чате обнаружено негативное сообщение:\n\n"
+                f"Пользователь: {user.full_name} (@{user.username})\n"
+                f"Сообщение: {message_text}\n"
+                f"Оценка негативности: {label_score:.2f}"
+            )
+            context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=alert_message)
 
     # Логирование сообщений (опционально можно убрать в продакшене)
     print(f"User: {user.full_name} (@{user.username})")
