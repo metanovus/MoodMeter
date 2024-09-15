@@ -14,7 +14,7 @@ from telegram.ext import (
 import mood_calculator
 import transformers_mood
 from lib.postgresql_manager import PostgreSQLConnector
-from utils import hash_password
+from utils.utils import hash_password
 
 # Загрузка переменных окружения
 load_dotenv()

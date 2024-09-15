@@ -7,7 +7,7 @@ import plotly.graph_objs as go
 import streamlit as st
 
 from lib.postgresql_manager import PostgreSQLConnector
-from utils import hash_password
+from utils.utils import hash_password
 
 # Инициализация подключения к базе данных
 conn = PostgreSQLConnector()
@@ -172,7 +172,7 @@ def main():
 
                     # Ресемплирование данных на основе выбранного интервала
                     if grouping == 'Hours':
-                        resampled_df = filtered_df.resample('H')['label_value'].mean()
+                        resampled_df = filtered_df.resample('h')['label_value'].mean()
                     elif grouping == 'Days':
                         resampled_df = filtered_df.resample('D')['label_value'].mean()
                     elif grouping == 'Weeks':
