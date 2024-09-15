@@ -41,7 +41,12 @@ def get_user_id(username):
 
 
 def get_user_chats(user_id):
-    query = "SELECT chat_id FROM user_chat WHERE user_id = %s"
+    query = """
+        SELECT uc.chat_id
+        FROM user_chat uc
+        JOIN chat c ON uc.chat_id = c.chat_id
+        WHERE uc.user_id = %s AND c.status = 'active'
+    """
     result = conn.read_data(query, (user_id,))
     return [row[0] for row in result]
 
