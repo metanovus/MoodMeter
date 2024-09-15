@@ -1,5 +1,4 @@
 import os
-import hashlib
 from datetime import datetime
 
 from dotenv import load_dotenv
@@ -15,6 +14,7 @@ from telegram.ext import (
 import mood_calculator
 import transformers_mood
 from lib.postgresql_manager import PostgreSQLConnector
+from utils import hash_password
 
 # Загрузка переменных окружения
 load_dotenv()
@@ -25,19 +25,6 @@ ADMIN_CHAT_ID = os.environ.get('ADMIN_CHAT_ID')
 
 # Инициализация подключения к базе данных
 conn = PostgreSQLConnector()
-
-
-def hash_password(password: str) -> str:
-    """
-    Хеширует пароль с использованием алгоритма SHA-256.
-
-    Args:
-        password (str): Пароль для хеширования.
-
-    Returns:
-        str: Захешированный пароль.
-    """
-    return hashlib.sha256(password.encode()).hexdigest()
 
 
 def save_message_to_sql(
