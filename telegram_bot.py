@@ -136,45 +136,81 @@ def handle_message(update: Update, context: CallbackContext) -> None:
     chat_id = message.chat_id
     user = message.from_user
     message_text = message.text
-    # Проверка, активен ли чат в БД
-    query_status_chat = (
-        f"select status from public.chat"
-        f"WHERE chat_id = {chat_id}"
-    )
-    status_chat_data = conn.read_data_to_dataframe(query_status_chat).iloc[0]
 
-    if status_chat_data == 'active':
-        # Анализ настроения сообщения
-        message_label, label_score = transformers_mood.predict_sentiment(message_text)
+    try:
+        # Проверка, активен ли чат в БД
+        query_status_chat = (
+            f"SELECT status FROM public.chat "
+            f"WHERE chat_id = %s"
+        )
+        status_chat_data = conn.read_data(query_status_chat, (chat_id,))
+        if not status_chat_data:
+            # Если чат не найден в базе данных
+            context.bot.send_message(
+                chat_id=chat_id,
+                text="Этот чат не настроен для мониторинга настроений. Пожалуйста, свяжитесь с администратором для получения дополнительной информации."
+            )
+            return
 
-        # Вычисление общего настроения чата
-        chat_mood = mood_calculator.calculate_weighted_sentiment(message_label, label_score)
-
-        # Сохранение данных в базу
-        save_message_to_sql(
+        status_chat = status_chat_data[0][0]
+    except Exception as e:
+        # Обработка ошибок при запросе к базе данных
+        print(f"Ошибка при проверке статуса чата: {e}")
+        context.bot.send_message(
             chat_id=chat_id,
-            user_id=user.id,
-            message_text=message_text,
-            message_datetime=message_datetime,
-            message_label=message_label,
-            label_score=label_score,
-            chat_mood=chat_mood
+            text="Произошла ошибка при обработке вашего сообщения. Пожалуйста, попробуйте позже."
+        )
+        return
+
+    if status_chat == 'active':
+        try:
+            # Анализ настроения сообщения
+            message_label, label_score = transformers_mood.predict_sentiment(message_text)
+
+            # Вычисление общего настроения чата
+            chat_mood = mood_calculator.calculate_weighted_sentiment(message_label, label_score)
+
+            # Сохранение данных в базу
+            save_message_to_sql(
+                chat_id=chat_id,
+                user_id=user.id,
+                message_text=message_text,
+                message_datetime=message_datetime,
+                message_label=message_label,
+                label_score=label_score,
+                chat_mood=chat_mood
+            )
+
+            # Проверка на негативные сообщения с высокой уверенностью
+            if message_label == "NEGATIVE" and label_score > 0.65:
+                alert_message = (
+                    f"Внимание! В чате обнаружено негативное сообщение:\n\n"
+                    f"Пользователь: {user.full_name} (@{user.username})\n"
+                    f"Сообщение: {message_text}\n"
+                    f"Оценка негативности: {label_score:.2f}"
+                )
+                context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=alert_message)
+
+            # Логирование сообщений (опционально можно убрать в продакшене)
+            print(f"User: {user.full_name} (@{user.username})")
+            print(f"Message: {message_text}")
+            print(f"Label: {message_label}, Score: {label_score}, Mood: {chat_mood}")
+        except Exception as e:
+            # Обработка ошибок при анализе настроений и сохранении данных
+            print(f"Ошибка при обработке сообщения: {e}")
+            context.bot.send_message(
+                chat_id=chat_id,
+                text="Произошла ошибка при анализе вашего сообщения. Пожалуйста, попробуйте позже."
+            )
+    else:
+        # Чат не активен, отправляем уведомление пользователю
+        context.bot.send_message(
+            chat_id=chat_id,
+            text="Этот чат в данный момент не мониторится системой MoodMeter."
         )
 
-        # Проверка на негативные сообщения с высокой уверенностью
-        if message_label == "NEGATIVE" and label_score > 0.65:
-            alert_message = (
-                f"Внимание! В чате обнаружено негативное сообщение:\n\n"
-                f"Пользователь: {user.full_name} (@{user.username})\n"
-                f"Сообщение: {message_text}\n"
-                f"Оценка негативности: {label_score:.2f}"
-            )
-            context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=alert_message)
-
-    # Логирование сообщений (опционально можно убрать в продакшене)
-    print(f"User: {user.full_name} (@{user.username})")
-    print(f"Message: {message_text}")
-    print(f"Label: {message_label}, Score: {label_score}, Mood: {chat_mood}")
+        # Опционально можно логировать этот случай
+        print(f"Чат с ID {chat_id} не активен. Сообщение от пользователя {user.full_name} игнорировано.")
 
 
 def start(update: Update, context: CallbackContext) -> None:
