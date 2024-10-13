@@ -77,7 +77,8 @@ source myenv/bin/activate
 ### 5. Установка Python-зависимостей:
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-bot.txt
+pip install -r requirements-streamlit.txt
 ```
 
 ### 6. Настройка окружения:
