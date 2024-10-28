@@ -4,9 +4,10 @@ RUN apt-get update && apt-get install -y libpq-dev python3-dev
 
 WORKDIR /app
 
-COPY . /app
+COPY requirements-bot.txt ./
+COPY moodmeter/services/telegram_bot.py moodmeter/modules/ moodmeter/utils/ lib/ ./moodmeter/
 
 RUN pip install --upgrade pip
 RUN pip install -r requirements-bot.txt
 
-CMD ["python3", "telegram_bot.py"]
+CMD ["python3", "moodmeter/services/telegram_bot.py"]

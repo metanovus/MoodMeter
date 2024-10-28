@@ -1,5 +1,4 @@
 import time
-from datetime import date
 from typing import List, Optional
 
 import pandas as pd
@@ -7,7 +6,7 @@ import plotly.graph_objs as go
 import streamlit as st
 
 from lib.postgresql_manager import PostgreSQLConnector
-from utils.utils import hash_password
+from moodmeter.utils.utils import hash_password
 
 # Инициализация подключения к базе данных
 conn = PostgreSQLConnector()

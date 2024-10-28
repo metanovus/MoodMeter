@@ -11,10 +11,9 @@ from telegram.ext import (
     Filters,
 )
 
-import mood_calculator
-import transformers_mood
+from moodmeter.modules import transformers_mood, mood_calculator
 from lib.postgresql_manager import PostgreSQLConnector
-from utils.utils import hash_password
+from moodmeter.utils.utils import hash_password
 
 # Загрузка переменных окружения
 load_dotenv()
