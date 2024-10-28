@@ -23,5 +23,3 @@ def predict_sentiment(message):
     label = sentiment['label']
     score = sentiment['score']
     return label, score
-
-print(predict_sentiment("Это нормальное сообщение"))
