@@ -13,7 +13,7 @@ from telegram.ext import (
 
 from moodmeter.modules import transformers_mood, mood_calculator
 from lib.postgresql_manager import PostgreSQLConnector
-from moodmeter.utils.utils import hash_password
+from moodmeter.utils.utils import hash_password, logger
 
 # Загрузка переменных окружения
 load_dotenv()
@@ -154,7 +154,7 @@ def handle_message(update: Update, context: CallbackContext) -> None:
         status_chat = status_chat_data[0][0]
     except Exception as e:
         # Обработка ошибок при запросе к базе данных
-        print(f"Ошибка при проверке статуса чата: {e}")
+        logger.error(f"Ошибка при проверке статуса чата: {e}")
         context.bot.send_message(
             chat_id=chat_id,
             text="Произошла ошибка при обработке вашего сообщения. Пожалуйста, попробуйте позже."
@@ -191,12 +191,12 @@ def handle_message(update: Update, context: CallbackContext) -> None:
                 context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=alert_message)
 
             # Логирование сообщений (опционально можно убрать в продакшене)
-            print(f"User: {user.full_name} (@{user.username})")
-            print(f"Message: {message_text}")
-            print(f"Label: {message_label}, Score: {label_score}, Mood: {chat_mood}")
+            logger.info(f"User: {user.full_name} (@{user.username})")
+            logger.info(f"Message: {message_text}")
+            logger.info(f"Label: {message_label}, Score: {label_score}, Mood: {chat_mood}")
         except Exception as e:
             # Обработка ошибок при анализе настроений и сохранении данных
-            print(f"Ошибка при обработке сообщения: {e}")
+            logger.error(f"Ошибка при обработке сообщения: {e}")
             context.bot.send_message(
                 chat_id=chat_id,
                 text="Произошла ошибка при анализе вашего сообщения. Пожалуйста, попробуйте позже."
@@ -209,7 +209,7 @@ def handle_message(update: Update, context: CallbackContext) -> None:
         )
 
         # Опционально можно логировать этот случай
-        print(f"Чат с ID {chat_id} не активен. Сообщение от пользователя {user.full_name} игнорировано.")
+        logger.info(f"Чат с ID {chat_id} не активен. Сообщение от пользователя {user.full_name} игнорировано.")
 
 
 def start(update: Update, context: CallbackContext) -> None:
