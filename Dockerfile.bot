@@ -10,4 +10,7 @@ COPY moodmeter/services/telegram_bot.py moodmeter/modules/ moodmeter/utils/ lib/
 RUN pip install --upgrade pip
 RUN pip install -r requirements-bot.txt
 
+ENV PYTHONPATH=/app
+
 CMD ["python3", "moodmeter/services/telegram_bot.py"]
+

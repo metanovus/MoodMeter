@@ -10,6 +10,8 @@ COPY moodmeter/services/dashboard.py moodmeter/modules/ moodmeter/utils/ lib/ ./
 RUN pip install --upgrade pip
 RUN pip install -r requirements-streamlit.txt
 
+ENV PYTHONPATH=/app
+
 EXPOSE 8501
 
 CMD ["streamlit", "run", "moodmeter/services/dashboard.py"]
