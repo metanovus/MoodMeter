@@ -348,7 +348,7 @@ def deactivate_chat_command(update: Update, context: CallbackContext) -> None:
         )
         return
 
-    if len(context.args) != 1:
+    if len(context.args) < 1:
         update.message.reply_text('Укажите ID чата через пробел после команды.')
         return
 
