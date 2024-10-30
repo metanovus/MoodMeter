@@ -288,7 +288,7 @@ def add_chat_command(update: Update, context: CallbackContext) -> None:
         )
         return
 
-    if len(context.args) != 1:
+    if len(context.args) == 0:
         update.message.reply_text('Укажите ID чата и название через пробел после команды.')
         return
 
