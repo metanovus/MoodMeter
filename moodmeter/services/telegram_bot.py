@@ -181,23 +181,24 @@ def handle_message(update: Update, context: CallbackContext) -> None:
             )
 
             # Проверка на негативные сообщения с высокой уверенностью
-            if message_label == "NEGATIVE" and label_score > 0.65:
-                query_chat_id = (
-                    f"select user_id, chat_name from public.user_chat "
-                    f"join public.chat using(chat_id)"
-                    f"WHERE chat_id = %s"
-                )
-                chat_id_data = conn.read_data(query_chat_id, (chat_id,))
-                logger.info(chat_id_data)
-                admin_chat_id = chat_id_data[0][0]
-                chat_name = chat_id_data[0][1]
-                alert_message = (
-                    f"Внимание! В чате {chat_id} ({chat_name}) обнаружено негативное сообщение:\n\n"
-                    f"Пользователь: {user.full_name} (@{user.username})\n"
-                    f"Сообщение: {message_text}\n"
-                    f"Оценка негативности: {label_score:.2f}"
-                )
-                context.bot.send_message(chat_id=admin_chat_id, text=alert_message)
+            # Рудимент старого алертинга. Пока не удаляем (возможно, скоро удалим)
+            # if message_label == "NEGATIVE" and label_score > 0.65:
+            #     query_chat_id = (
+            #         f"select user_id, chat_name from public.user_chat "
+            #         f"join public.chat using(chat_id)"
+            #         f"WHERE chat_id = %s"
+            #     )
+            #     chat_id_data = conn.read_data(query_chat_id, (chat_id,))
+            #     logger.info(chat_id_data)
+            #     admin_chat_id = chat_id_data[0][0]
+            #     chat_name = chat_id_data[0][1]
+            #     alert_message = (
+            #         f"Внимание! В чате {chat_id} ({chat_name}) обнаружено негативное сообщение:\n\n"
+            #         f"Пользователь: {user.full_name} (@{user.username})\n"
+            #         f"Сообщение: {message_text}\n"
+            #         f"Оценка негативности: {label_score:.2f}"
+            #     )
+            #     context.bot.send_message(chat_id=admin_chat_id, text=alert_message)
 
             # Логирование сообщений (опционально можно убрать в продакшене)
             logger.info(f"User: {user.full_name} (@{user.username})")
@@ -411,6 +412,31 @@ def rename_chat_command(update: Update, context: CallbackContext) -> None:
     conn.update_data('chat', 'chat_id', chat_id, 'chat_name', new_chat_name)
     update.message.reply_text(f'Чат с ID {chat_id} был переименован на {new_chat_name}.')
 
+def send_average_score_messages(context: CallbackContext) -> None:
+    """Отправляет среднее значение label_score пользователю."""
+
+    query_alert = f"""
+    select chat_id, uc.user_id, chat_name, avg(
+    case 
+        when message_label = 'POSITIVE' then 1
+        when message_label = 'NEGATIVE' then -1
+        else 0
+    end
+    ) as avg_score from public.message_analysis as msg
+    join public.user_chat as uc using(chat_id)
+    join public.chat as c using(chat_id)
+    WHERE message_datetime >= NOW() - INTERVAL '1 hour'
+    group by chat_id, uc.user_id, chat_name
+    """
+    data_alert = conn.read_data_to_dataframe(query_alert)
+
+    for _, row in data_alert.iterrows():
+        user_id = row['user_id']
+        chat_name = row['chat_name']
+        avg_score = row['avg_score']
+        message = f"Ваш средний label_score в чате {chat_name} за последний час: {avg_score:.2f}"
+        context.bot.send_message(chat_id=user_id, text=message)
+
 
 def welcome(update: Update, context: CallbackContext) -> None:
     """
@@ -434,7 +460,10 @@ def main() -> None:
     updater = Updater(token=TOKEN, use_context=True)
     dispatcher = updater.dispatcher
 
-    # Обработчики команд и сообщений
+    # Обработчики команд и сообщенийj
+    job_queue = updater.job_queue
+    job_queue.run_repeating(send_average_score_messages, interval=3600, first=0)  # Отправляет сообщения каждый час
+
     dispatcher.add_handler(CommandHandler('start', start))
     dispatcher.add_handler(CommandHandler('add_user', add_user_command))
     dispatcher.add_handler(CommandHandler('add_chat', add_chat_command))
@@ -442,7 +471,6 @@ def main() -> None:
     dispatcher.add_handler(CommandHandler('rename_chat', rename_chat_command))
     dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
     dispatcher.add_handler(MessageHandler(Filters.status_update.new_chat_members, welcome))
-
     # Запуск бота
     updater.start_polling()
     updater.idle()
