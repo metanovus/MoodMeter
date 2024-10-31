@@ -257,10 +257,10 @@ def add_user_command(update: Update, context: CallbackContext) -> None:
     user_id = update.message.from_user.id
     password = hash_password(str(user_id))
 
-    query_user = f"SELECT user_id FROM public.user_credentials WHERE user_id={user_id}"
+    query_user = "SELECT user_id FROM public.user_credentials WHERE user_id=%s"
 
     try:
-        users = conn.read_data_to_dataframe(query_user)
+        users = conn.read_data_to_dataframe(query_user, (user_id,))
 
         if users.empty:
             save_user_to_sql(user_id, password)
@@ -412,6 +412,7 @@ def rename_chat_command(update: Update, context: CallbackContext) -> None:
     conn.update_data('chat', 'chat_id', chat_id, 'chat_name', new_chat_name)
     update.message.reply_text(f'Чат с ID {chat_id} был переименован на {new_chat_name}.')
 
+
 def send_average_score_messages(context: CallbackContext) -> None:
     """Отправляет среднее значение label_score пользователю."""
 
@@ -438,21 +439,6 @@ def send_average_score_messages(context: CallbackContext) -> None:
         context.bot.send_message(chat_id=user_id, text=message)
 
 
-def welcome(update: Update, context: CallbackContext) -> None:
-    """
-    Обрабатывает событие, когда бот добавлен в чат.
-
-    Args:
-        update (Update): Объект обновления от Telegram.
-        context (CallbackContext): Контекст бота.
-    """
-    for member in update.message.new_chat_members:
-        if member.id == context.bot.id:
-            chat_id = update.effective_chat.id
-            # Здесь можно реализовать чтение истории чата
-            break
-
-
 def main() -> None:
     """
     Инициализирует бота и запускает обработку сообщений.
@@ -460,7 +446,7 @@ def main() -> None:
     updater = Updater(token=TOKEN, use_context=True)
     dispatcher = updater.dispatcher
 
-    # Обработчики команд и сообщенийj
+    # Обработчики команд и сообщений
     job_queue = updater.job_queue
     job_queue.run_repeating(send_average_score_messages, interval=3600, first=0)  # Отправляет сообщения каждый час
 
@@ -470,7 +456,6 @@ def main() -> None:
     dispatcher.add_handler(CommandHandler('deactivate_chat', deactivate_chat_command))
     dispatcher.add_handler(CommandHandler('rename_chat', rename_chat_command))
     dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
-    dispatcher.add_handler(MessageHandler(Filters.status_update.new_chat_members, welcome))
     # Запуск бота
     updater.start_polling()
     updater.idle()
