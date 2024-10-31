@@ -413,21 +413,24 @@ def rename_chat_command(update: Update, context: CallbackContext) -> None:
     update.message.reply_text(f'Чат с ID {chat_id} был переименован на {new_chat_name}.')
 
 
-def send_average_score_messages(context: CallbackContext) -> None:
-    """Отправляет среднее значение label_score пользователю."""
+def send_alerts(context: CallbackContext) -> None:
+    """Отправляет алерты пользователям при достижении критических значений настроения."""
 
-    query_alert = f"""
-    select chat_id, uc.user_id, chat_name, avg(
-    case 
-        when message_label = 'POSITIVE' then 1
-        when message_label = 'NEGATIVE' then -1
-        else 0
-    end
-    ) as avg_score from public.message_analysis as msg
-    join public.user_chat as uc using(chat_id)
-    join public.chat as c using(chat_id)
+    query_alert = """
+    SELECT chat_id, uc.user_id, chat_name, 
+           AVG(
+               CASE 
+                   WHEN message_label = 'POSITIVE' THEN 1
+                   WHEN message_label = 'NEGATIVE' THEN -1
+                   ELSE 0
+               END
+           ) AS avg_score,
+           COUNT(*) AS message_count
+    FROM public.message_analysis AS msg
+    JOIN public.user_chat AS uc USING(chat_id)
+    JOIN public.chat AS c USING(chat_id)
     WHERE message_datetime >= NOW() - INTERVAL '1 hour'
-    group by chat_id, uc.user_id, chat_name
+    GROUP BY chat_id, uc.user_id, chat_name
     """
     data_alert = conn.read_data_to_dataframe(query_alert)
 
@@ -435,8 +438,22 @@ def send_average_score_messages(context: CallbackContext) -> None:
         user_id = row['user_id']
         chat_name = row['chat_name']
         avg_score = row['avg_score']
-        message = f"Ваш средний label_score в чате {chat_name} за последний час: {avg_score:.2f}"
-        context.bot.send_message(chat_id=user_id, text=message)
+        message_count = row['message_count']
+
+        # Определяем пороговое значение в зависимости от количества сообщений
+        if 1 <= message_count <= 10:
+            threshold = -0.7
+        elif 11 <= message_count <= 50:
+            threshold = -0.5
+        elif message_count >= 51:
+            threshold = -0.3
+        else:
+            # Если сообщений меньше 1, не отправляем алерт
+            continue
+
+        if avg_score <= threshold:
+            message = f"⚠️ Внимание! Среднее настроение в чате '{chat_name}' за последний час опустилось до {avg_score:.2f} при количестве сообщений {message_count}."
+            context.bot.send_message(chat_id=user_id, text=message)
 
 
 def main() -> None:
@@ -448,7 +465,7 @@ def main() -> None:
 
     # Обработчики команд и сообщений
     job_queue = updater.job_queue
-    job_queue.run_repeating(send_average_score_messages, interval=3600, first=0)  # Отправляет сообщения каждый час
+    job_queue.run_repeating(send_alerts, interval=3600, first=0)  # Отправляет сообщения каждый час
 
     dispatcher.add_handler(CommandHandler('start', start))
     dispatcher.add_handler(CommandHandler('add_user', add_user_command))
