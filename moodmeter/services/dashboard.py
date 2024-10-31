@@ -156,6 +156,56 @@ def load_message_data(chat_id: int, start_date: date, end_date: date, grouping: 
         return pd.DataFrame()
 
 
+@st.cache_data
+def load_message_counts(chat_id: int, start_date: date, end_date: date, grouping: str, cache_key: str) -> pd.DataFrame:
+    """
+    Загружает данные с количеством сообщений каждого класса для заданного chat_id с фильтрацией по дате и группировкой.
+
+    Args:
+        chat_id (int): Идентификатор чата.
+        start_date (date): Начальная дата для фильтрации.
+        end_date (date): Конечная дата для фильтрации.
+        grouping (str): Интервал группировки ('Hours', 'Days', 'Weeks').
+
+    Returns:
+        pd.DataFrame: Датафрейм с количеством сообщений по классам.
+    """
+    # Определение интервала группировки для SQL
+    if grouping == 'Hours':
+        interval = 'hour'
+    elif grouping == 'Days':
+        interval = 'day'
+    elif grouping == 'Weeks':
+        interval = 'week'
+    else:
+        interval = 'day'  # По умолчанию группировка по дням
+
+    # SQL-запрос для получения количества сообщений по классам
+    query = f"""
+        SELECT date_trunc('{interval}', message_datetime) AS period, 
+               message_label,
+               COUNT(*) AS message_count
+        FROM message_analysis
+        WHERE chat_id = %s AND message_datetime BETWEEN %s AND %s
+        GROUP BY period, message_label
+        ORDER BY period;
+    """
+
+    try:
+        # Преобразуем даты в datetime
+        start_datetime = datetime.combine(start_date, datetime.min.time())
+        end_datetime = datetime.combine(end_date, datetime.max.time())
+
+        # Выполнение запроса
+        data = conn.read_data(query, (chat_id, start_datetime, end_datetime))
+        df = pd.DataFrame(data, columns=['date', 'message_label', 'message_count'])
+        df['message_label'] = df['message_label'].astype(str)
+        return df
+    except Exception as e:
+        logger.error(f"Error loading message counts: {e}")
+        return pd.DataFrame()
+
+
 def create_mood_chart(df: pd.DataFrame, grouping: str) -> go.Figure:
     """
     Создает график настроения на основе данных.
@@ -190,6 +240,61 @@ def create_mood_chart(df: pd.DataFrame, grouping: str) -> go.Figure:
         showlegend=False,
         plot_bgcolor='white',
         barmode='relative'
+    )
+
+    return fig
+
+
+def create_message_count_chart(df_counts: pd.DataFrame, grouping: str) -> go.Figure:
+    """
+    Создает столбчатую диаграмму количества сообщений по классам.
+
+    Args:
+        df_counts (pd.DataFrame): Данные с количеством сообщений по классам.
+        grouping (str): Интервал группировки.
+
+    Returns:
+        go.Figure: Объект графика Plotly.
+    """
+    # Pivot таблицу для удобства построения графика
+    df_pivot = df_counts.pivot(index='date', columns='message_label', values='message_count').fillna(0)
+
+    # Убедимся, что все метки присутствуют в столбцах
+    for label in ['POSITIVE', 'NEGATIVE', 'NEUTRAL']:
+        if label not in df_pivot.columns:
+            df_pivot[label] = 0
+
+    df_pivot = df_pivot.sort_index()
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(
+        x=df_pivot.index,
+        y=df_pivot['POSITIVE'],
+        name='Positive',
+        marker_color='green'
+    ))
+
+    fig.add_trace(go.Bar(
+        x=df_pivot.index,
+        y=df_pivot['NEGATIVE'],
+        name='Negative',
+        marker_color='red'
+    ))
+
+    fig.add_trace(go.Bar(
+        x=df_pivot.index,
+        y=df_pivot['NEUTRAL'],
+        name='Neutral',
+        marker_color='#D3D3C0'
+    ))
+
+    fig.update_layout(
+        title=f'Message Counts by Label ({grouping})',
+        xaxis_title='Time',
+        yaxis_title='Message Count',
+        barmode='stack',
+        plot_bgcolor='white'
     )
 
     return fig
@@ -243,7 +348,7 @@ def display_dashboard(user_id: int):
 
     # Фильтрация по дате
     st.sidebar.header("Filter by Date")
-    start_date = st.sidebar.date_input("Start date", value=date.today())
+    start_date = st.sidebar.date_input("Start date", value=date.today() - timedelta(days=7))
     end_date = st.sidebar.date_input("End date", value=date.today())
 
     # Проверка корректности дат
@@ -260,6 +365,7 @@ def display_dashboard(user_id: int):
     # Загружаем данные сообщений для выбранного чата с фильтрацией и группировкой
     cache_key = get_cache_key_for_dates(start_date, end_date)
     df = load_message_data(chat_id, start_date, end_date, grouping, cache_key)
+    df_counts = load_message_counts(chat_id, start_date, end_date, grouping, cache_key)
 
     if df.empty:
         st.warning("No data available for the selected chat.")
@@ -267,10 +373,32 @@ def display_dashboard(user_id: int):
         st.title("Mood grouping by time interval")
         st.plotly_chart(fig)
     else:
-        # Создаем график
-        fig = create_mood_chart(df, grouping)
-        st.markdown(f"<h3>Mood grouping by {grouping.lower()}</h3>", unsafe_allow_html=True)
-        st.plotly_chart(fig)
+        # Вычисляем среднее настроение за период
+        average_mood = df['mood_score'].mean()
+        if average_mood > 0:
+            mood_color = 'green'
+        elif average_mood < 0:
+            mood_color = 'red'
+        else:
+            mood_color = '#D3D3C0'
+
+        # Отображаем среднее настроение
+        st.markdown(f"<h3>Average Mood: <span style='color:{mood_color}'>{average_mood:.2f}</span></h3>", unsafe_allow_html=True)
+
+        # Создаем график настроения
+        fig_mood = create_mood_chart(df, grouping)
+        st.plotly_chart(fig_mood)
+
+        # Проверяем, есть ли данные для графика количества сообщений
+        if not df_counts.empty:
+            # Создаем график количества сообщений
+            fig_counts = create_message_count_chart(df_counts, grouping)
+            st.plotly_chart(fig_counts)
+        else:
+            st.warning("No message counts available for the selected chat.")
+
+    # Дополнительное пространство
+    st.markdown("<br><br>", unsafe_allow_html=True)
 
 
 def main():
