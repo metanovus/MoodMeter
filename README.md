@@ -14,7 +14,7 @@ MoodMeter анализирует настроения в чате с помощ�
 
 ## 🛠️ Технологии
 - Python 3.11
-- Hugging Face Transformers (+ PyTorch)
+- Hugging Face Transformers
 - Heroku (PostgreSQL)
 - Streamlit
 - Plotly
