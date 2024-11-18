@@ -42,7 +42,7 @@ MoodMeter анализирует настроения в чате с помощ�
 ## ⚙️ Установка
 1. Клонируйте репозиторий:
    ```bash
-   git clone https://github.com/username/MoodMeter.git
+   git clone https://github.com/metanovus/MoodMeter.git
    cd MoodMeter
    ```
 2. Установите Python 3.11
