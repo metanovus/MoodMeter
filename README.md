@@ -13,6 +13,12 @@ MoodMeter анализирует настроения в чате с помощ�
 Почему именно такая модель: обучена давать оценку **NEUTRAL**, **POSITIVE** или **NEGATIVE** при оценке отзывов на русском языке, следовательно, она подходит наилучшим образом.
 
 ## 🛠️ Технологии
+<p align="center">
+  <a href="https://go-skill-icons.vercel.app/">
+    <img src="https://go-skill-icons.vercel.app/api/icons?i=python,pycharm,huggingface,postgres,docker,streamlit,pandas&theme=dark"/>
+  </a>
+</p>
+
 - Python 3.11
 - Hugging Face Transformers
 - Heroku (PostgreSQL)
