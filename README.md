@@ -5,7 +5,7 @@
 ![Mood over Time](https://i.imghippo.com/files/ihsi8695Dg.jpg "График Mood over Time (Days) показывает динамику настроения: 
 🟢 Положительное, 
 🔴 Отрицательное.
-График Message Count by Label (Days) визуализирует количество сообщений, распределённых по меткам настроения:
+График Message Count by Label (Days) визуализирует количество сообщений по меткам:
 🔴 Негативные.
 🟢 Позитивные.
 ⚪ Нейтральные.")
@@ -34,9 +34,9 @@ MoodMeter анализирует настроения в чате с помощ�
 - Docker
 
 ## 👥 Команда
-- [Вадим Самойлов](https://github.com/metanovus): Telegram-бот, Sentiment analysis, интерфейс, документация.
-- [Михаил Иаковлев](https://github.com/miakovlev): Оптимизация, контейнеризация, тестирование, работа с БД
-- [Вячеслав Ровенский](https://github.com/Viacheslav-Rovenskiy): участие в архитектурных решениях, разработка компонентов.
+- [Вадим Самойлов](https://github.com/metanovus): [Telegram-бот](https://github.com/metanovus/MoodMeter/blob/main/moodmeter/services/dashboard.py), [Sentiment analysis](https://github.com/metanovus/MoodMeter/blob/main/moodmeter/modules/transformers_mood.py), [интерфейс](https://github.com/metanovus/MoodMeter/blob/main/moodmeter/services/telegram_bot.py), документация.
+- [Михаил Иаковлев](https://github.com/miakovlev): [Оптимизация](https://github.com/metanovus/MoodMeter/blob/main/moodmeter/utils/utils.py), [контейнеризация](https://github.com/metanovus/MoodMeter/blob/main/docker-compose.yml), [работа с БД](https://github.com/metanovus/MoodMeter/blob/main/lib/postgresql_manager.py), тестирование
+- [Вячеслав Ровенский](https://github.com/Viacheslav-Rovenskiy): Участие в архитектурных решениях, доработка различных компонентов
 - [Николай Ответчиков](https://github.com/otvet4ikov): Анализ и архитектура проекта, тестирование
 
 ## ⚙️ Установка
