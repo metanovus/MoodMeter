@@ -11,7 +11,8 @@
 <sub>*Для получения описания графика наведите мышкой на изображение*</sub>
 
 ## 📋 Описание
-MoodMeter анализирует настроения в чате с помощью ML, классифицируя сообщения на позитивные, нейтральные и негативные. Построен на **Python**, **Hugging Face Transformers**, **Heroku** и **Streamlit**.
+MoodMeter анализирует настроения в чате с помощью ML, классифицируя сообщения на позитивные, нейтральные и негативные. Построен на **Python**, **Hugging Face Transformers**, **Heroku** и **Streamlit**. Проект построен в рамках [симулятора Data Science](https://karpov.courses/simulator-ds) от [![image](https://github.com/user-attachments/assets/ea423329-6516-44f1-bb3e-f5ce76cc004c)](https://karpov.courses/)
+
 
 ## 🏗️ Архитектура
 - **Сбор данных**: API-интеграция для получения сообщений, сохранение в PostgreSQL.
@@ -34,10 +35,10 @@ MoodMeter анализирует настроения в чате с помощ�
 - Docker
 
 ## 👥 Команда
-- [Вадим Самойлов](https://github.com/metanovus): [Telegram-бот](https://github.com/metanovus/MoodMeter/blob/main/moodmeter/services/telegram_bot.py), [Sentiment analysis](https://github.com/metanovus/MoodMeter/blob/main/moodmeter/modules/transformers_mood.py), [интерфейс](https://github.com/metanovus/MoodMeter/blob/main/moodmeter/services/dashboard.py), документация.
-- [Михаил Иаковлев](https://github.com/miakovlev): [Оптимизация](https://github.com/metanovus/MoodMeter/blob/main/moodmeter/utils/utils.py), [контейнеризация](https://github.com/metanovus/MoodMeter/blob/main/docker-compose.yml), [работа с БД](https://github.com/metanovus/MoodMeter/blob/main/lib/postgresql_manager.py), тестирование
-- [Вячеслав Ровенский](https://github.com/Viacheslav-Rovenskiy): Участие в архитектурных решениях, доработка различных компонентов
-- [Николай Ответчиков](https://github.com/otvet4ikov): Анализ и архитектура проекта, тестирование
+- [Вадим Самойлов](https://github.com/metanovus): [Telegram-бот](https://github.com/metanovus/MoodMeter/blob/main/moodmeter/services/dashboard.py), [Sentiment analysis](https://github.com/metanovus/MoodMeter/blob/main/moodmeter/modules/transformers_mood.py), [интерфейс](https://github.com/metanovus/MoodMeter/blob/main/moodmeter/services/telegram_bot.py), документация.
+- [Михаил Иаковлев](https://github.com/miakovlev): [Оптимизация](https://github.com/metanovus/MoodMeter/blob/main/moodmeter/utils/utils.py), [контейнеризация](https://github.com/metanovus/MoodMeter/blob/main/docker-compose.yml), [работа с БД](https://github.com/metanovus/MoodMeter/blob/main/lib/postgresql_manager.py), [создание метрики](https://github.com/metanovus/MoodMeter/blob/main/moodmeter/modules/mood_calculator.py), тестирование
+- [Вячеслав Ровенский](https://github.com/Viacheslav-Rovenskiy): Участие в архитектурных решениях, доработка различных компонентов (аннотации, docstrings).
+- [Николай Ответчиков](https://github.com/otvet4ikov): Анализ и архитектура проекта, тестирование.
 
 ## ⚙️ Установка
 1. Клонируйте репозиторий:
