@@ -21,7 +21,7 @@ MoodMeter анализирует настроения в чате с помощ�
 ## 🛠️ Технологии
 <p align="center">
   <a href="https://go-skill-icons.vercel.app/">
-    <img src="https://go-skill-icons.vercel.app/api/icons?i=linux,python,pycharm,huggingface,postgres,docker,streamlit,pandas&theme=dark"/>
+    <img src="https://go-skill-icons.vercel.app/api/icons?i=linux,python,pycharm,huggingface,postgres,docker,streamlit,heroku,pandas&theme=dark"/>
   </a>
 </p>
 
